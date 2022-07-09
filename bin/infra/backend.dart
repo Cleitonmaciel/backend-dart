@@ -9,6 +9,8 @@ import 'middleware_interception.dart';
 import 'security/security_service_imp.dart';
 
 void main() async {
+  CustomEnv.fromFile('.env');
+
   var cascadeHandler = Cascade()
       .add(LoginApi(SecurityServiceImp()).handler)
       .add(BlogApi(NoticiaService()).handler)
@@ -16,16 +18,14 @@ void main() async {
 
   var handler = Pipeline()
       .addMiddleware(logRequests())
-      .addMiddleware(
-        MiddlewareInterception().middleware,
-      )
+      .addMiddleware(MiddlewareInterception().middleware)
+      .addMiddleware(SecurityServiceImp().authorization)
       .addHandler(cascadeHandler);
 
   await CustomServer().initialize(
-    handler: handler,
-    // address: await CustomEnv.get<String>(key: 'server_address'),
-    // port: await CustomEnv.get<int>(key: 'server_port'),
-    address: 'localhost', //await CustomEnv.get<String>(key: 'server_address'),
-    port: 8080 //await CustomEnv.get<int>(key: 'server_port'),
-  );
+      handler: handler,
+      // address: await CustomEnv.get<String>(key: 'server_address'),
+      // port: await CustomEnv.get<int>(key: 'server_port'),
+      address: 'localhost',
+      port: 8080);
 }

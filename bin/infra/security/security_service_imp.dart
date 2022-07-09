@@ -1,3 +1,8 @@
+import 'dart:ffi';
+
+import 'package:shelf/shelf.dart';
+import 'package:shelf/src/middleware.dart';
+
 import '../../utils/custom_env.dart';
 import 'security_service.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
@@ -19,6 +24,44 @@ class SecurityServiceImp implements SecurityService<JWT> {
   @override
   Future<JWT?> validateJWT(String token) async {
     String key = await CustomEnv.get(key: 'jwt_key');
-    return JWT.verify(token, SecretKey(key));
+
+    try {
+      return JWT.verify(token, SecretKey(key));
+    } on JWTInvalidError {
+      return null;
+    } on JWTExpiredError {
+      return null;
+    } on JWTNotActiveError {
+      return null;
+    } on JWTUndefinedError {
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
+
+  @override
+  Middleware get authorization {
+    return (Handler handler) {
+      return (Request req) async {
+        String? autorizationHeader = req.headers['Authorization'];
+        
+        JWT? jwt;
+        
+        if (autorizationHeader != null) {
+          if (autorizationHeader.startsWith('Bearer ')) ;
+          {
+            String token = autorizationHeader.substring(7);
+            jwt = await validateJWT(token);
+          }
+        }
+        var request = req.change(context: {'jwt': jwt});
+        return handler(request);
+      };
+    };
+  }
+
+  @override
+  // TODO: implement verifyJwt
+  Middleware get verifyJwt => throw UnimplementedError();
 }
